@@ -4,7 +4,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 const app = express();
 const Port = process.env.PORT;
 
@@ -34,28 +35,40 @@ app
 .get('/login', (req, res)=>{
     res.render('login')
 })
-.post('/login', (req, res)=>{
+.post('/login', async (req, res)=>{
+ 
+
     User.findOne({
         email: req.body.username
     }, (err, found)=>{
+      
+
+
         if(err){
             console.log(err)
         } else{
-            if(found){
-                if(found.password === md5(req.body.password)){
+            if(!found){
+               console.log('User not found!')
+            } else{
+                bcrypt.compare(req.body.password, found.password,(err, result)=>{
+                    
+                if(result=== true){
                     res.render('secrets')
                 } else{
                     console.log('wrong password!')
                    
                 }
+                   
+        
+                })
 
-            } else{
-                console.log('User not found!')
+
             }
 
         }
 
     })
+
 
 });
 
@@ -64,18 +77,25 @@ app
 .get('/register', (req, res)=>{
     res.render('register')
 } )
-.post('/register', (req, res)=>{
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
+.post('/register', async (req, res)=>{
+     bcrypt.hash(req.body.password, saltRounds).then ((hash)=>{
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        })
+        newUser.save((err)=>{
+            if(!err){
+                res.render('secrets')
+            } else{
+                console.log(err)
+            }
+        });
     })
-    newUser.save((err)=>{
-        if(!err){
-            res.render('secrets')
-        } else{
-            console.log(err)
-        }
-    });
+
+       
+   
+
+    
 
     
 } );
